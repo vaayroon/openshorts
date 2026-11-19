@@ -1,0 +1,35 @@
+# Copy to watcher/channels.yml (git-ignored) and edit. The watcher re-reads it
+# on every run, so changes apply without a restart.
+
+# OpenShorts records, for every job, that the submitter owns the content or
+# has the rights to process it. The watcher submits unattended, so you confirm
+# it here once for the channels listed below.
+acknowledge_rights: false
+
+# Most jobs submitted in any rolling 24 hours (each one spends Gemini quota).
+max_jobs_per_day: 3
+
+# How many of the watcher's jobs may run at once. With 1, the next stream
+# waits until the previous one has finished (completed or failed).
+max_in_flight: 1
+
+# Options for every channel; any channel can override them.
+defaults:
+  # "auto" lets OpenShorts pick per video. Others: "screencast" (screen over
+  # presenter), "split" (two speakers stacked), "none" (single crop).
+  # "speaker_cut" and "punch_in" can be added on top of any of them.
+  layouts: ["auto"]
+  auto_hook: true
+  # pill, classic, dark, yellow, red, outline, outline_yellow. Empty = pill.
+  auto_hook_style: outline
+  # Clips per stream (1-15). Empty = OpenShorts decides from the length.
+  target_clips:
+  # Streams shorter or longer than this are ignored.
+  min_minutes: 20
+  max_hours: 6
+
+channels:
+  - url: https://www.youtube.com/@channel-handle
+  # - url: https://www.youtube.com/@another-channel
+  #   layouts: ["screencast"]
+  #   target_clips: 10
