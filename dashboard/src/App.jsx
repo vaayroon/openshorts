@@ -26,6 +26,7 @@ import LoginModal from './components/LoginModal';
 import TrialGate from './components/TrialGate';
 import AdvancedBanner from './components/AdvancedBanner';
 import HistoryTab from './components/HistoryTab';
+import RecentJobs from './components/RecentJobs';
 import AutopilotTab from './components/AutopilotTab';
 import ProfileMenu from './components/ProfileMenu';
 import Modal from './components/ui/Modal';
@@ -670,12 +671,26 @@ function App() {
   // its files from R2 into the server's working dir and returns the full state.
   const restoreProject = async (projectJobId) => {
     const data = await apiJson(`/api/projects/${projectJobId}/restore`, { method: 'POST' });
+    showReopenedJob(data.job_id, data.result, data.project_state, '♻️ Project restored from your library.');
+  };
+
+  // Self-host: reopen a finished job that is still on this server's disk
+  // (Recent projects under the uploader). Its clips come from /api/status.
+  const openRecentJob = async (recentJobId) => {
+    const data = await apiJson(`/api/status/${recentJobId}`);
+    if (data.status !== 'completed' || !data.result) throw new Error('Job is not available');
+    showReopenedJob(recentJobId, data.result, null, '♻️ Project reopened from this server.');
+  };
+
+  // Show a finished job's clips as if it had just completed, with its source
+  // video next to them when the server still has it.
+  const showReopenedJob = (reopenedJobId, result, savedProjectState, logLine) => {
     flushClipState();
-    setProjectState(data.project_state || null);
+    setProjectState(savedProjectState || null);
     setNoSource(true);
-    setJobId(data.job_id);
-    setResults(data.result || null);
-    setLogs(['♻️ Project restored from your library.']);
+    setJobId(reopenedJobId);
+    setResults(result || null);
+    setLogs([logLine]);
     setLogTimes([Date.now() / 1000]);
     setProcessingMedia(null);
     setQualityGate(null);
@@ -683,10 +698,10 @@ function App() {
     setActiveTab('dashboard');
     // The long video comes back next to the clips when it is still there, so
     // a clip can be checked against it before lengthening or trimming it.
-    sourcePlayable(data.job_id).then((ok) => {
-      if (!ok || jobIdRef.current !== data.job_id) return;
+    sourcePlayable(reopenedJobId).then((ok) => {
+      if (!ok || jobIdRef.current !== reopenedJobId) return;
       setNoSource(false);
-      setProcessingMedia({ type: 'server', payload: `/api/source/${data.job_id}` });
+      setProcessingMedia({ type: 'server', payload: `/api/source/${reopenedJobId}` });
     });
   };
 
@@ -2292,6 +2307,9 @@ function App() {
                 </div>
 
                 <MediaInput onProcess={handleProcess} isProcessing={status === 'processing'} />
+
+                {/* Self-host has no History: reopen a finished job from disk. */}
+                {!billingEnabled && <RecentJobs onOpenJob={openRecentJob} />}
 
                 <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-muted text-xs sm:text-sm">
                   <span className="flex items-center gap-2"><Youtube size={16} /> YouTube</span>

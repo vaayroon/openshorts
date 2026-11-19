@@ -6700,6 +6700,48 @@ async def _status_from_snapshot(request, snap, queue):
     }
 
 
+RECENT_JOBS_LIMIT = 50
+
+
+def _recent_job_entry(job_id, job):
+    """One reopenable job for /api/recent-jobs, or None when it has nothing to
+    show: not finished, no clip delivered, or its folder already swept."""
+    # The status /api/status reports, so a listed job always opens.
+    if _presented_status(job_id, job) != 'completed':
+        return None
+    clips = (job.get('result') or {}).get('clips') or []
+    output_dir = job.get('output_dir')
+    if not clips or not output_dir:
+        return None
+    meta = glob.glob(os.path.join(output_dir, "*_metadata.json"))
+    if not meta:
+        return None
+    # The metadata file is named "<job_id>_<source title>_metadata.json": the
+    # title comes from the name, without reading the transcript-sized JSON.
+    base = os.path.basename(meta[0])[:-len("_metadata.json")]
+    title = base[len(job_id) + 1:] if base.startswith(f"{job_id}_") else base
+    try:
+        finished_at = int(os.path.getmtime(meta[0]))
+    except OSError:
+        return None
+    return {"job_id": job_id, "title": title or "Untitled video",
+            "clip_count": len(clips), "finished_at": finished_at}
+
+
+@app.get("/api/recent-jobs")
+async def recent_jobs():
+    """Self-host: the finished jobs still on disk, newest first, so the
+    dashboard can reopen one after its saved session is gone. Cloud has its
+    per-user History instead, and this unscoped list must never answer there."""
+    if BILLING_ENABLED:
+        raise HTTPException(status_code=404, detail="Not found")
+    entries = await asyncio.to_thread(
+        lambda: [e for e in (_recent_job_entry(jid, job)
+                             for jid, job in list(jobs.items())) if e])
+    entries.sort(key=lambda e: e["finished_at"], reverse=True)
+    return {"jobs": entries[:RECENT_JOBS_LIMIT]}
+
+
 @app.get("/api/status/{job_id}")
 async def get_status(job_id: str, request: Request):
     front_view = request.scope.get(_STATUS_VIEW_KEY)
