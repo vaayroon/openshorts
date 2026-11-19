@@ -68,3 +68,4 @@ README.md
 
 # Rust build output
 osrender/target/
+.nv
