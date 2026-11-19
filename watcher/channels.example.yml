@@ -15,13 +15,46 @@ max_in_flight: 1
 
 # Options for every channel; any channel can override them.
 defaults:
-  # Same choices as the dashboard's "vertical layout" menu:
-  #   auto       = "Auto (AI picks per video)"
-  #   split      = "Two speakers stacked"
-  #   screencast = "Screen over presenter"
-  #   none       = "Single crop only"
-  # API-only add-ons, not in the dashboard, combinable with any of the above:
-  #   speaker_cut (hard cuts to whoever talks), punch_in (small zoom on beats)
+  # How a 16:9 stream becomes a 9:16 clip. Pick ONE base layout and optionally
+  # add-ons, e.g. ["screencast"] or ["split", "speaker_cut"].
+  # (docs/architecture/layouts-and-reframing.md has the full detail.)
+  #
+  # Base layouts (the dashboard's "vertical layout" menu):
+  #
+  #   auto        "Auto (AI picks per video)"
+  #               One Gemini call per video (12 frames) chooses none,
+  #               screencast or split, and two-person shots are checked scene
+  #               by scene. It only adds layouts, never removes yours.
+  #               Use it when a channel mixes formats or you are not sure.
+  #
+  #   split       "Two speakers stacked"
+  #               Two people seen in the same frame become two halves, one
+  #               above the other, with captions on the seam. Needs both faces
+  #               in one frame; close-up-only shots stay a normal crop.
+  #               Use it for podcasts and interviews filmed as a two-shot.
+  #
+  #   screencast  "Screen over presenter"
+  #               Per shot, Gemini says whether it shows a screen. Screen shots
+  #               go full width on top; a webcam laid in a corner (OBS, stream
+  #               VODs) is enlarged underneath; fast gameplay is zoomed a bit
+  #               and follows the motion. Camera-only shots keep a normal crop.
+  #               Use it for gameplay or screen-share streams with a facecam.
+  #
+  #   none        "Single crop only"
+  #               No AI layout: one vertical crop that follows the main face or
+  #               subject. Steady and predictable, but it cuts off the sides.
+  #               Use it for one person talking to camera, or when the others
+  #               make mistakes on a channel.
+  #
+  # Add-ons (API only, not in the dashboard; test them on one video first):
+  #
+  #   speaker_cut Hard cuts to whoever is talking, judged from mouth movement.
+  #               Use it with split (or auto) on podcasts where both people
+  #               are on screen and you prefer cuts to a stacked frame.
+  #
+  #   punch_in    A ~12% zoom on the loud beats of the audio. Only affects
+  #               single-person shots (the face-following crop).
+  #               Use it for energetic talkers; skip it for gameplay.
   layouts: ["auto"]
   auto_hook: true
   # pill, classic, dark, yellow, red, outline, outline_yellow. Empty = pill.
