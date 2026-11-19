@@ -37,6 +37,9 @@ DEFAULTS = {
     "auto_hook": True,
     "auto_hook_style": None,
     "target_clips": None,
+    # Clip length band in seconds; None keeps OpenShorts' own (15-60 s).
+    "clip_min_seconds": None,
+    "clip_max_seconds": None,
     "min_minutes": 20,
     "max_hours": 6,
 }
@@ -61,6 +64,34 @@ def _streams_url(url):
     return url
 
 
+# The bounds POST /api/process enforces (app.process_endpoint). Checked here so
+# a bad value stops the watcher with a clear message instead of every
+# submission coming back 400 and being retried run after run.
+CLIP_MIN_RANGE = (5, 175)
+CLIP_MAX_RANGE = (10, 180)
+CLIP_MIN_GAP = 5
+
+
+def _check_clip_lengths(options, where):
+    values = {}
+    for name, (lo, hi) in (("clip_min_seconds", CLIP_MIN_RANGE),
+                           ("clip_max_seconds", CLIP_MAX_RANGE)):
+        raw = options.get(name)
+        if raw in (None, ""):
+            continue
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            raise ConfigError(f"{where}: {name} must be a number (got {raw!r})")
+        if not lo <= value <= hi:
+            raise ConfigError(f"{where}: {name} must be between {lo} and {hi} seconds")
+        values[name] = value
+    lo, hi = values.get("clip_min_seconds"), values.get("clip_max_seconds")
+    if lo is not None and hi is not None and hi < lo + CLIP_MIN_GAP:
+        raise ConfigError(f"{where}: clip_max_seconds must be at least {CLIP_MIN_GAP} s "
+                          "above clip_min_seconds")
+
+
 def normalize_config(raw):
     """Validate the parsed channels file and resolve per-channel options."""
     if not isinstance(raw, dict):
@@ -80,6 +111,7 @@ def normalize_config(raw):
         if not isinstance(ch, dict) or not ch.get("url"):
             raise ConfigError(f"channels: each entry needs a url (got {ch!r})")
         options = {**defaults, **{k: v for k, v in ch.items() if k != "url"}}
+        _check_clip_lengths(options, ch["url"])
         resolved.append({"url": ch["url"], "streams_url": _streams_url(ch["url"]),
                          "options": options})
     return {"max_jobs_per_day": int(raw.get("max_jobs_per_day", 3)),
@@ -147,6 +179,9 @@ def _job_options(options):
             body["auto_hook_style"] = options["auto_hook_style"]
     if options.get("target_clips"):
         body["target_clips"] = int(options["target_clips"])
+    for name in ("clip_min_seconds", "clip_max_seconds"):
+        if options.get(name) not in (None, ""):
+            body[name] = float(options[name])
     return body
 
 

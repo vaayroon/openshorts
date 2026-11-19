@@ -211,6 +211,37 @@ class TestConfig:
         assert [c["streams_url"] for c in cfg["channels"]] == [
             "https://www.youtube.com/@a/streams", "https://www.youtube.com/@b/streams"]
 
+    def test_clip_length_reaches_the_job_only_when_set(self):
+        state = watcher.empty_state()
+        backend = Recorder()
+        url = "https://www.youtube.com/@a/streams"
+        cfg = _config(max_in_flight=2,
+                      defaults={"clip_min_seconds": 20, "clip_max_seconds": 45},
+                      channels=[{"url": "https://www.youtube.com/@a"},
+                                {"url": "https://www.youtube.com/@b",
+                                 "clip_min_seconds": None, "clip_max_seconds": None}])
+        listing = {url: [], "https://www.youtube.com/@b/streams": []}
+        watcher.run_once(cfg, state, listing.get, backend.submit, backend.status, NOW)
+        listing = {url: [_entry("a1")], "https://www.youtube.com/@b/streams": [_entry("b1")]}
+
+        watcher.run_once(cfg, state, listing.get, backend.submit, backend.status, NOW)
+
+        sent = {u.rsplit("=", 1)[1]: o for u, o in backend.submitted}
+        assert sent["a1"]["clip_min_seconds"] == 20
+        assert sent["a1"]["clip_max_seconds"] == 45
+        assert "clip_min_seconds" not in sent["b1"]
+        assert "clip_max_seconds" not in sent["b1"]
+
+    @pytest.mark.parametrize("lengths, message", [
+        ({"clip_min_seconds": 3}, "clip_min_seconds"),
+        ({"clip_max_seconds": 200}, "clip_max_seconds"),
+        ({"clip_min_seconds": 40, "clip_max_seconds": 42}, "at least 5"),
+        ({"clip_min_seconds": "veinte"}, "clip_min_seconds"),
+    ])
+    def test_clip_lengths_the_backend_would_refuse_stop_the_watcher(self, lengths, message):
+        with pytest.raises(watcher.ConfigError, match=message):
+            _config(defaults=lengths)
+
     def test_channel_options_override_the_defaults(self):
         cfg = _config(defaults={"layouts": ["auto"], "target_clips": 5},
                       channels=[{"url": "https://www.youtube.com/@a", "target_clips": 10}])
