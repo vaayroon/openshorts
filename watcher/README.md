@@ -17,14 +17,16 @@ review and publish them. Nothing is posted automatically.
    cp watcher/channels.example.yml watcher/channels.yml
    ```
 
-2. Give the backend a Gemini key for unattended jobs (the dashboard's key lives
-   in your browser, which the watcher cannot reach). In `.env`:
+2. Create the watcher's env file and put your Gemini key in it (the key you
+   saved in the dashboard lives in your browser, which the watcher cannot
+   reach):
 
-   ```
-   GEMINI_API_KEY=your-key
+   ```bash
+   cp watcher/.env.example watcher/.env
    ```
 
-3. Add the watcher to the stack, also in `.env`:
+3. Add the watcher to the stack in the root `.env` (Compose reads
+   `COMPOSE_FILE` only from there):
 
    ```
    COMPOSE_FILE=docker-compose.yml:docker-compose.override.yml:docker-compose.watcher.yml

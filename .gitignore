@@ -55,3 +55,4 @@ osrender/target/
 
 # Stream watcher: your channel list stays local
 watcher/channels.yml
+watcher/.env

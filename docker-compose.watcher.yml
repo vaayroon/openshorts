@@ -6,11 +6,13 @@ services:
     build:
       context: ./watcher
     container_name: openshorts-watcher
+    # GEMINI_API_KEY (sent as X-Gemini-Key) and WATCHER_INTERVAL_SECONDS.
+    # Copy watcher/.env.example to watcher/.env (git-ignored).
+    env_file:
+      - path: ./watcher/.env
+        required: true
     environment:
       OPENSHORTS_URL: http://backend:8000
-      WATCHER_INTERVAL_SECONDS: ${WATCHER_INTERVAL_SECONDS:-1800}
-      # Sent as X-Gemini-Key. Empty: the backend falls back to its own env.
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
       # Long form so a missing channels.yml is an error, not an empty
       # root-owned directory that Docker creates in its place.
