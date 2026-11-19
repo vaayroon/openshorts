@@ -15,15 +15,23 @@ max_in_flight: 1
 
 # Options for every channel; any channel can override them.
 defaults:
-  # "auto" lets OpenShorts pick per video. Others: "screencast" (screen over
-  # presenter), "split" (two speakers stacked), "none" (single crop).
-  # "speaker_cut" and "punch_in" can be added on top of any of them.
+  # Same choices as the dashboard's "vertical layout" menu:
+  #   auto       = "Auto (AI picks per video)"
+  #   split      = "Two speakers stacked"
+  #   screencast = "Screen over presenter"
+  #   none       = "Single crop only"
+  # API-only add-ons, not in the dashboard, combinable with any of the above:
+  #   speaker_cut (hard cuts to whoever talks), punch_in (small zoom on beats)
   layouts: ["auto"]
   auto_hook: true
   # pill, classic, dark, yellow, red, outline, outline_yellow. Empty = pill.
   auto_hook_style: outline
   # Clips per stream (1-15). Empty = OpenShorts decides from the length.
   target_clips:
+  # Clip length band in seconds. Empty = OpenShorts' own 15-60 s.
+  # min 5-175, max 10-180, and max at least 5 s above min.
+  clip_min_seconds:
+  clip_max_seconds:
   # Streams shorter or longer than this are ignored.
   min_minutes: 20
   max_hours: 6
