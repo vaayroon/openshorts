@@ -1,0 +1,29 @@
+# Stream watcher (watcher/): sends finished live streams of the channels in
+# watcher/channels.yml to the backend. Add this file to COMPOSE_FILE in .env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.override.yml:docker-compose.watcher.yml
+services:
+  watcher:
+    build:
+      context: ./watcher
+    container_name: openshorts-watcher
+    environment:
+      OPENSHORTS_URL: http://backend:8000
+      WATCHER_INTERVAL_SECONDS: ${WATCHER_INTERVAL_SECONDS:-1800}
+      # Sent as X-Gemini-Key. Empty: the backend falls back to its own env.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      # Long form so a missing channels.yml is an error, not an empty
+      # root-owned directory that Docker creates in its place.
+      - type: bind
+        source: ./watcher/channels.yml
+        target: /config/channels.yml
+        read_only: true
+        bind:
+          create_host_path: false
+      - watcher-data:/data
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+volumes:
+  watcher-data:
